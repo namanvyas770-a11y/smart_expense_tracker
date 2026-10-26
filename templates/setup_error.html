@@ -1,0 +1,5 @@
+{% extends "base.html" %}
+{% block title %}Setup needed · SpendWise{% endblock %}
+{% block content %}
+<div class="form-shell"><section class="panel"><h1 class="page-title">Database connection failed</h1><p class="text-secondary">The app could not connect to MySQL. Confirm that MySQL Server is running, execute <code>schema.sql</code>, and check your environment variables.</p><p class="small text-secondary">Technical detail: {{ error }}</p><a class="btn btn-primary" href="{{ url_for('dashboard') }}">Try again</a></section></div>
+{% endblock %}

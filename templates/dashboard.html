@@ -1,0 +1,49 @@
+{% extends "base.html" %}
+{% block title %}Dashboard · SpendWise{% endblock %}
+{% block head %}<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>{% endblock %}
+{% block content %}
+<div class="d-flex flex-wrap align-items-center justify-content-between gap-3 mb-4">
+  <div><p class="eyebrow mb-1">YOUR MONEY, AT A GLANCE</p><h1 class="page-title mb-1">Dashboard</h1><p class="text-secondary mb-0">A clearer view of your monthly finances.</p></div>
+  <form class="d-flex gap-2 align-items-center" method="get">
+    <input class="form-control" type="month" name="month" value="{{ month }}" aria-label="Select month">
+    <button class="btn btn-dark">View</button>
+  </form>
+</div>
+<div class="row g-3 mb-4">
+  <div class="col-12 col-md-4"><div class="stat-card"><span class="stat-label">Income</span><div class="stat-value text-success">₹{{ '%.2f'|format(summary.income) }}</div><span class="stat-foot">Money received this month</span></div></div>
+  <div class="col-12 col-md-4"><div class="stat-card"><span class="stat-label">Expenses</span><div class="stat-value text-danger">₹{{ '%.2f'|format(summary.expenses) }}</div><span class="stat-foot">Money spent this month</span></div></div>
+  <div class="col-12 col-md-4"><div class="stat-card"><span class="stat-label">Net balance</span><div class="stat-value {% if summary.balance >= 0 %}text-success{% else %}text-danger{% endif %}">₹{{ '%.2f'|format(summary.balance) }}</div><span class="stat-foot">{{ summary.transaction_count }} transactions recorded</span></div></div>
+</div>
+<div class="row g-3 mb-4">
+  <div class="col-12 col-lg-7"><section class="panel h-100"><div class="panel-heading"><div><h2 class="panel-title">Spending by day</h2><p class="panel-subtitle">Daily expense totals for {{ month }}</p></div></div><div class="chart-wrap"><canvas id="dailyChart"></canvas></div></section></div>
+  <div class="col-12 col-lg-5"><section class="panel h-100"><div class="panel-heading"><div><h2 class="panel-title">Where it goes</h2><p class="panel-subtitle">Expenses grouped by category</p></div></div><div class="chart-wrap doughnut-wrap"><canvas id="categoryChart"></canvas></div></section></div>
+</div>
+<div class="row g-3">
+  <div class="col-12 col-lg-7"><section class="panel h-100"><div class="panel-heading"><div><h2 class="panel-title">Recent transactions</h2><p class="panel-subtitle">Latest activity for the selected month</p></div><a class="small link-dark" href="{{ url_for('transactions', month=month) }}">View all</a></div>
+    {% if recent %}<div class="table-responsive"><table class="table align-middle mb-0"><thead><tr><th>Transaction</th><th>Date</th><th class="text-end">Amount</th></tr></thead><tbody>
+    {% for item in recent %}<tr><td><div class="fw-semibold">{{ item.title }}</div><div class="small text-secondary">{{ item.category }}</div></td><td class="text-secondary">{{ item.transaction_date.strftime('%d %b') }}</td><td class="text-end fw-semibold {% if item.type == 'income' %}text-success{% else %}text-danger{% endif %}">{% if item.type == 'income' %}+{% else %}−{% endif %}₹{{ '%.2f'|format(item.amount) }}</td></tr>{% endfor %}
+    </tbody></table></div>{% else %}<div class="empty-state">No transactions for this month yet. Add your first one to get started.</div>{% endif %}
+  </section></div>
+  <div class="col-12 col-lg-5"><section class="panel h-100"><div class="panel-heading"><div><h2 class="panel-title">Budget pulse</h2><p class="panel-subtitle">Spending against your category limits</p></div><a class="small link-dark" href="{{ url_for('budgets', month=month) }}">Manage</a></div>
+    {% if budgets %}<div class="budget-list">{% for b in budgets %}<div class="budget-item"><div class="d-flex justify-content-between gap-2"><span class="fw-semibold">{{ b.category }}</span><span class="small text-secondary">₹{{ '%.0f'|format(b.spent) }} / ₹{{ '%.0f'|format(b.monthly_limit) }}</span></div><div class="progress mt-2"><div class="progress-bar {% if b.spent > b.monthly_limit %}bg-danger{% elif b.percent >= 80 %}bg-warning{% else %}bg-success{% endif %}" style="width: {{ b.percent }}%"></div></div></div>{% endfor %}</div>{% else %}<div class="empty-state">No budgets set for this month. Add limits to keep spending on track.</div>{% endif %}
+  </section></div>
+</div>
+{% endblock %}
+{% block scripts %}
+<script>
+const categoryLabels = {{ categories | map(attribute='category') | list | tojson }};
+const categoryValues = {{ categories | map(attribute='total') | list | tojson }};
+const dailyLabels = {{ daily | map(attribute='day') | list | tojson }};
+const dailyValues = {{ daily | map(attribute='total') | list | tojson }};
+new Chart(document.getElementById('dailyChart'), {
+  type: 'line',
+  data: { labels: dailyLabels, datasets: [{ label: 'Expenses', data: dailyValues, borderColor: '#5267df', backgroundColor: 'rgba(82,103,223,.12)', fill: true, tension: .35, pointRadius: 3 }] },
+  options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true, ticks: { callback: v => '₹' + v } } } }
+});
+new Chart(document.getElementById('categoryChart'), {
+  type: 'doughnut',
+  data: { labels: categoryLabels, datasets: [{ data: categoryValues, backgroundColor: ['#5267df','#21a179','#f0b429','#e76f51','#7b61a8','#4e8098','#d16ba5','#8c9a76','#9a8c98'], borderWidth: 0 }] },
+  options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'bottom', labels: { usePointStyle: true, padding: 16 } } } }
+});
+</script>
+{% endblock %}
